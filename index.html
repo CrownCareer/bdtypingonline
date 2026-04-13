@@ -35,7 +35,6 @@
 
         table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }
         th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
-        .edit-btn { background: #f39c12; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; }
         .error-highlight { background-color: #ffcccc; color: #cc0000; text-decoration: underline; }
     </style>
 </head>
@@ -119,10 +118,9 @@
         </div>
         <div class="status-banner">🌟 ফলাফল: <div class="status-tag" id="r-status">PASS</div></div>
         <div style="margin-top:20px;">
-            <div style="font-weight:bold; margin-bottom:5px;">Writing Part (আপনার অংশ):</div>
+            <div style="font-weight:bold; margin-bottom:5px;">Writing Part (আপনার):</div>
             <div id="user-compare-text" style="padding:15px; border:1px solid #ddd; background:#f9f9f9; line-height:1.8; font-size:18px; border-radius:5px; margin-bottom:15px;"></div>
-            
-            <div style="font-weight:bold; margin-bottom:5px;">Main Passage (মূল অনুচ্ছেদ):</div>
+            <div style="font-weight:bold; margin-bottom:5px;">মূল Passage:</div>
             <div id="original-text-result" style="padding:15px; border:1px solid #ddd; background:#fff; line-height:1.8; font-size:18px; border-radius:5px; color:#444;"></div>
         </div>
         <center><button class="btn-main" style="width: 200px; margin-top:20px;" onclick="location.reload()">আবার চেষ্টা করুন</button></center>
@@ -135,8 +133,8 @@
             <textarea id="adm-text" style="height: 60px; width:100%; border:1px solid #ddd;"></textarea><br>
             <button class="btn-main" style="width: auto;" onclick="saveTxt()">Save Passage</button>
         </div>
-        <table id="adm-table-container">
-            <thead><tr><th>নাম</th><th>ইউজার</th><th>পাসওয়ার্ড</th><th>মেয়াদ</th><th>স্ট্যাটাস</th><th>অ্যাকশন</th></tr></thead>
+        <table>
+            <thead><tr><th>নাম</th><th>ইউজার</th><th>পাসওয়ার্ড</th><th>মেয়াদ</th><th>স্ট্যাটাস</th></tr></thead>
             <tbody id="adm-table"></tbody>
         </table>
         <button class="btn-main" style="background:#666; margin-top:20px; width:auto" onclick="location.reload()">Logout Admin</button>
@@ -192,14 +190,24 @@
         const email = document.getElementById('recover-email').value.toLowerCase().trim();
         const found = users.find(x => x.user === email);
         if(found) alert("আপনার পাসওয়ার্ড: " + found.pass);
-        else alert("এই ইমেইলটি নিবন্ধিত নয়!");
+        else alert("ইমেইল পাওয়া যায়নি!");
     }
 
     function checkAdminAccess() {
         if(document.getElementById('admin-entry-pass').value === adminPass) {
             document.getElementById('adm-text').value = passage;
+            renderAdminTable();
             showPage('page-admin');
         } else alert("ভুল এডমিন পাসওয়ার্ড!");
+    }
+
+    function renderAdminTable() {
+        const tbody = document.getElementById('adm-table');
+        tbody.innerHTML = "";
+        users.forEach(u => {
+            const status = new Date().getTime() > u.expiry ? "<span style='color:red'>Expired</span>" : "<span style='color:green'>Active</span>";
+            tbody.innerHTML += `<tr><td>${u.name}</td><td>${u.user}</td><td>${u.pass}</td><td>${new Date(u.expiry).toLocaleDateString()}</td><td>${status}</td></tr>`;
+        });
     }
 
     function startCount() {
@@ -219,11 +227,7 @@
         const inp = document.getElementById('t-input').value;
         const pWords = passage.trim().split(/\s+/);
         const iWords = inp.trim().split(/\s+/);
-        
-        let correctChars = 0;
-        let wrongWordsCount = 0;
-        let comparisonHTML = "";
-
+        let correctChars = 0, wrongWordsCount = 0, comparisonHTML = "";
         pWords.forEach((word, idx) => {
             const userWord = iWords[idx] || "";
             if (userWord === word && word !== "") {
@@ -234,12 +238,10 @@
                 comparisonHTML += `<span class="error-highlight">${userWord}</span> `;
             }
         });
-
         const timeSpentSeconds = 600 - timeLeft;
         const elapsedMins = Math.max(timeSpentSeconds / 60, 0.01);
         const wpm = ((inp.length / 5) / elapsedMins).toFixed(2);
         const accuracy = inp.length > 0 ? Math.round((correctChars / inp.length) * 100) : 0;
-
         document.getElementById('r-date').innerText = new Date().toLocaleDateString();
         document.getElementById('r-time-taken').innerText = `${Math.floor(timeSpentSeconds/60)}:${(timeSpentSeconds%60).toString().padStart(2,'0')}`;
         document.getElementById('r-wpm').innerText = wpm;
@@ -249,7 +251,6 @@
         document.getElementById('r-cor').innerText = correctChars;
         document.getElementById('r-wrong').innerText = wrongWordsCount;
         document.getElementById('r-err').innerText = (100 - accuracy < 0 ? 0 : 100 - accuracy) + "%";
-        
         document.getElementById('user-compare-text').innerHTML = comparisonHTML;
         document.getElementById('original-text-result').innerText = passage;
         showPage('page-result');
