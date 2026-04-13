@@ -64,7 +64,7 @@
             <input type="text" id="sign-name" placeholder="আপনার নাম">
             <input type="text" id="sign-user" placeholder="Gmail (English Only)">
             <input type="password" id="sign-pass" placeholder="পাসওয়ার্ড (নূন্যতম ৬ অক্ষর)">
-            <button class="btn-main" style="background: var(--green);" onclick="doSignup()">ভেরিফিকেশন কোড পাঠান</button>
+            <button class="btn-main" id="send-code-btn" style="background: var(--green);" onclick="doSignup()">ভেরিফিকেশন কোড পাঠান</button>
         </div>
         <div id="verify-div" class="hidden">
             <p style="font-size:12px; color:var(--blue);">আপনার জিমেইলে ৪ ডিজিটের কোড পাঠানো হয়েছে।</p>
@@ -142,6 +142,9 @@
 </div>
 
 <script>
+    // গুরুত্বপূর্ণ: এখানে আপনার EmailJS Public Key দিন
+    (function() { emailjs.init("YOUR_PUBLIC_KEY"); })();
+
     let users = JSON.parse(localStorage.getItem('bcc_final_users')) || [];
     let passage = localStorage.getItem('bcc_final_text') || "The quick brown fox jumps over the lazy dog.";
     let adminPass = "admin123";
@@ -154,6 +157,38 @@
         document.getElementById(id).classList.remove('hidden');
     }
 
+    function doSignup() {
+        const n = document.getElementById('sign-name').value;
+        const u = document.getElementById('sign-user').value.toLowerCase().trim();
+        const p = document.getElementById('sign-pass').value;
+        const btn = document.getElementById('send-code-btn');
+
+        if(!u.endsWith("@gmail.com")) return alert("শুধুমাত্র Gmail ব্যবহার করুন!");
+        if(n === "" || p.length < 6) return alert("সব ঘর সঠিক তথ্য দিয়ে পূরণ করুন!");
+
+        generatedCode = Math.floor(1000 + Math.random() * 9000);
+        tempUser = {name: n, user: u, pass: p};
+
+        btn.innerText = "পাঠানো হচ্ছে...";
+        btn.disabled = true;
+
+        // EmailJS এর মাধ্যমে মেইল পাঠানো
+        emailjs.send("YOUR_SERVICE_ID", "YOUR_TEMPLATE_ID", {
+            to_email: u,
+            to_name: n,
+            code: generatedCode
+        }).then(() => {
+            alert("আপনার জিমেইলে কোড পাঠানো হয়েছে। কোডটি স্ক্রিনেও দেখা যাচ্ছে: " + generatedCode);
+            document.getElementById('sign-inputs').classList.add('hidden');
+            document.getElementById('verify-div').classList.remove('hidden');
+        }, (err) => {
+            alert("মেইল পাঠানো সম্ভব হয়নি। তবে আপনার কোডটি হলো: " + generatedCode);
+            document.getElementById('sign-inputs').classList.add('hidden');
+            document.getElementById('verify-div').classList.remove('hidden');
+        });
+    }
+
+    // বাকি সব লজিক আগের মতোই (পরিবর্তন করা হয়নি)
     function doLogin() {
         const u = document.getElementById('login-user').value.toLowerCase().trim();
         const p = document.getElementById('login-pass').value;
@@ -164,24 +199,13 @@
         } else alert("ভুল তথ্য!");
     }
 
-    function doSignup() {
-        const n = document.getElementById('sign-name').value;
-        const u = document.getElementById('sign-user').value.toLowerCase().trim();
-        const p = document.getElementById('sign-pass').value;
-        if(!u.endsWith("@gmail.com")) return alert("শুধুমাত্র Gmail ব্যবহার করুন!");
-        generatedCode = Math.floor(1000 + Math.random() * 9000);
-        tempUser = {name: n, user: u, pass: p};
-        alert("ভেরিফিকেশন কোড: " + generatedCode);
-        document.getElementById('sign-inputs').classList.add('hidden');
-        document.getElementById('verify-div').classList.remove('hidden');
-    }
-
     function verifyAndFinish() {
         const code = document.getElementById('verify-code').value;
         if(code === generatedCode.toString()) {
             let exp = new Date(); exp.setDate(exp.getDate() + 30);
             users.push({...tempUser, expiry: exp.getTime()});
             localStorage.setItem('bcc_final_users', JSON.stringify(users));
+            alert("রেজিস্ট্রেশন সফল!");
             location.reload();
         } else alert("ভুল কোড!");
     }
